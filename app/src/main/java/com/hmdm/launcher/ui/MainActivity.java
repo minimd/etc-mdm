@@ -60,6 +60,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -127,6 +128,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import io.flutter.embedding.android.FlutterActivity;
 import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 
@@ -318,6 +320,7 @@ public class MainActivity
         }
     };
 
+
     private GradientDrawable selectedManageButtonBorder = new GradientDrawable();
     private ImageView exitView;
     private long exitFirstTapTime = 0;
@@ -330,9 +333,21 @@ public class MainActivity
 
     private boolean firstStartAfterProvisioning = false;
 
+
     @Override
     protected void onCreate( Bundle savedInstanceState ) {
         super.onCreate( savedInstanceState );
+        setContentView(R.layout.activity_main);
+        Button flutterButton = findViewById(R.id.openFlutterButton);
+        flutterButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // This starts the Flutter screen
+                startActivity(
+                        FlutterActivity.createDefaultIntent(MainActivity.this)
+                );
+            }
+        });
 
         Intent intent = getIntent();
         Log.d(Const.LOG_TAG, "MainActivity started" + (intent != null && intent.getAction() != null ?
@@ -604,6 +619,7 @@ public class MainActivity
         }.execute();
     }
 
+
     private void startServices() {
         // Foreground apps checks are not available in a free version: services are the stubs
         if (preferences.getInt(Const.PREFERENCES_USAGE_STATISTICS, Const.PREFERENCES_OFF) == Const.PREFERENCES_ON) {
@@ -721,6 +737,7 @@ public class MainActivity
         }
         checkAndStartLauncher();
     }
+
 
     private void checkAndStartLauncher() {
 

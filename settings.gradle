@@ -18,3 +18,8 @@
  */
 
 include ':app', ':lib'
+setBinding(new Binding([gradle: this]))
+evaluate(new File(
+        settingsDir.parentFile,
+        'exs/.android/include_flutter.groovy'
+))

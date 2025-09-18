@@ -107,6 +107,7 @@
                 android:scaleType="centerCrop"
                 android:id="@+id/activity_main_background"/>
 
+
             <LinearLayout
                 android:id="@+id/status_header"
                 android:layout_width="match_parent"
@@ -132,6 +133,11 @@
                     android:layout_width="@dimen/status_bar_side_width"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="5dp"/>
+                <Button
+                    android:id="@+id/openFlutterButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Open Flutter Screen" />
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
