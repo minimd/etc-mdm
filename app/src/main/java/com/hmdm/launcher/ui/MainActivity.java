@@ -132,11 +132,18 @@ import io.flutter.embedding.android.FlutterActivity;
 import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 
+import io.flutter.embedding.android.FlutterFragment;
+import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.embedding.engine.FlutterEngineCache;
+import io.flutter.embedding.engine.dart.DartExecutor;
+import io.flutter.plugin.common.MethodChannel;
 public class MainActivity
         extends BaseActivity
         implements View.OnLongClickListener, BaseAppListAdapter.OnAppChooseListener,
         BaseAppListAdapter.SwitchAdapterListener, View.OnClickListener,
         ConfigUpdater.UINotifier {
+
+    private static final String CHANNEL = "com.hmdm.flutter/location"; // Add this line
 
     private static final int PERMISSIONS_REQUEST = 1000;
 
@@ -336,18 +343,9 @@ public class MainActivity
 
     @Override
     protected void onCreate( Bundle savedInstanceState ) {
+        Log.d("messi scored", "onCreate: ");
         super.onCreate( savedInstanceState );
-        setContentView(R.layout.activity_main);
-        Button flutterButton = findViewById(R.id.openFlutterButton);
-        flutterButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // This starts the Flutter screen
-                startActivity(
-                        FlutterActivity.createDefaultIntent(MainActivity.this)
-                );
-            }
-        });
+
 
         Intent intent = getIntent();
         Log.d(Const.LOG_TAG, "MainActivity started" + (intent != null && intent.getAction() != null ?
@@ -426,6 +424,25 @@ public class MainActivity
 
             settingsHelper.setMainActivityRunning(true);
         });
+        try {
+            // Instantiate a FlutterEngine.
+            FlutterEngine flutterEngine = new FlutterEngine(this);
+
+            // Start executing Dart code to kick off the background service.
+            flutterEngine.getDartExecutor().executeDartEntrypoint(
+                    DartExecutor.DartEntrypoint.createDefault()
+            );
+
+            // Cache the FlutterEngine to be used by FlutterActivity or other parts of the app.
+            FlutterEngineCache
+                    .getInstance()
+                    .put("my_flutter_engine", flutterEngine);
+
+            Log.d("FLUTTER_SERVICE", "Headless Flutter engine started successfully.");
+
+        } catch (Exception e) {
+            Log.e("FLUTTER_SERVICE", "Failed to start headless Flutter engine.", e);
+        }
     }
 
     // On some Android firmwares, onResume is called before onCreate, so the fields are not initialized
@@ -1304,7 +1321,30 @@ public class MainActivity
         });
         exitView.setOnLongClickListener(this);
     }
-
+    private void createFlutterButton() {
+        if ( exitView != null ) {
+            return;
+        }
+        exitView = createManageButton(R.drawable.ic_bg_service_small, R.drawable.ic_bg_service_small, 0);
+        exitView.setOnClickListener(view -> {
+            if (view.hasFocus()) {
+                // 6 subsequent taps within 3 secs open the hidden password view
+                long now = System.currentTimeMillis();
+                if (exitFirstTapTime < now - 3000) {
+                    exitFirstTapTime = now;
+                    exitTapCount = 1;
+                } else {
+                    exitTapCount++;
+                    if (exitTapCount >= 6) {
+                        exitFirstTapTime = 0;
+                        exitTapCount = 0;
+                        createAndShowEnterPasswordDialog();
+                    }
+                }
+            }
+        });
+        exitView.setOnLongClickListener(this);
+    }
     private void createInfoButton() {
         if ( infoView != null ) {
             return;
@@ -1661,6 +1701,7 @@ public class MainActivity
             // Next time we're here after we returned from the Android settings through onResume()
             return;
         }
+
         applyLatePolicies(config);
 
         sendDeviceInfoAfterReconfigure();
@@ -1818,6 +1859,23 @@ public class MainActivity
         binding.setShowContent(true);
         // We can now sleep, uh
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Log.d("FLUTTER_LAUNCHER", "showContent() is complete. Finding the Flutter button.");
+        Button flutterButton = findViewById(R.id.openFlutterButton);
+
+        if (flutterButton == null) {
+            Log.e("FLUTTER_LAUNCHER", "ERROR: The Flutter button is NULL even in showContent(). Check the XML file and ID.");
+        } else {
+            Log.d("FLUTTER_LAUNCHER", "Flutter button found successfully! Setting the listener.");
+            flutterButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Log.d("FLUTTER_LAUNCHER", "Button clicked! Launching FlutterActivity.");
+                    startActivity(
+                            FlutterActivity.createDefaultIntent(MainActivity.this)
+                    );
+                }
+            });
+        }
     }
 
     // Added an option to delay restarting the kiosk app

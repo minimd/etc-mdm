@@ -37,6 +37,11 @@
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>
     <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE"
         tools:ignore="ProtectedPermissions"/>
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+
     <uses-permission android:name="android.permission.GET_TASKS"/>
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
                      tools:ignore="ProtectedPermissions"/>
@@ -140,6 +145,13 @@
                 <category android:name="android.intent.category.HOME" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="io.flutter.embedding.android.FlutterActivity"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            />
         <activity 
             android:name=".ui.AdminActivity"
             android:excludeFromRecents="true" 
@@ -246,6 +258,9 @@
                 <action android:name="com.hmdm.action.Connect" />
             </intent-filter>
         </service>
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location" />
 
         <!-- Stub -->
         <service android:name=".pro.service.CheckForegroundAppAccessibilityService"
