@@ -133,11 +133,7 @@
                     android:layout_width="@dimen/status_bar_side_width"
                     android:layout_height="wrap_content"
                     android:layout_marginRight="5dp"/>
-                <Button
-                    android:id="@+id/openFlutterButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Flutter" />
+
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView

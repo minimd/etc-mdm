@@ -250,6 +250,13 @@
                 android:resource="@xml/provider_paths"/>
         </provider>
 
+        <provider
+            android:name=".HeadwindMdmDataProvider"
+            android:authorities="com.hmdm.launcher.flutter_data_provider"
+        android:exported="true" />
+
+
+
         <service android:name=".pro.service.CheckForegroundApplicationService"
             android:exported="true"/>
 

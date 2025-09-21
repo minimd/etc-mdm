@@ -72,7 +72,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.databinding.DataBindingUtil;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.GridLayoutManager;
-
+import io.flutter.plugin.common.MethodChannel;
+import com.hmdm.launcher.util.DeviceInfoProvider;
 import com.github.anrwatchdog.ANRWatchDog;
 import com.hmdm.launcher.BuildConfig;
 import com.hmdm.launcher.Const;
@@ -334,7 +335,7 @@ public class MainActivity
     private int exitTapCount = 0;
     private ImageView infoView;
     private ImageView updateView;
-
+    private ImageView flutterView; // <-- ADD THIS LINE
     private View statusBarView;
     private View rightToolbarView;
 
@@ -424,22 +425,84 @@ public class MainActivity
 
             settingsHelper.setMainActivityRunning(true);
         });
+
+
+
+
         try {
-            // Instantiate a FlutterEngine.
-            FlutterEngine flutterEngine = new FlutterEngine(this);
+            if (!FlutterEngineCache.getInstance().contains("my_flutter_engine")) {
+                // Instantiate a FlutterEngine.
+                FlutterEngine flutterEngine = new FlutterEngine(this);
 
-            // Start executing Dart code to kick off the background service.
-            flutterEngine.getDartExecutor().executeDartEntrypoint(
-                    DartExecutor.DartEntrypoint.createDefault()
-            );
+                // Start executing Dart code to kick off the background service.
+                flutterEngine.getDartExecutor().executeDartEntrypoint(
+                        DartExecutor.DartEntrypoint.createDefault()
+                );
+                final String CHANNEL = "com.hmdm.flutter/device_info";
 
-            // Cache the FlutterEngine to be used by FlutterActivity or other parts of the app.
-            FlutterEngineCache
-                    .getInstance()
-                    .put("my_flutter_engine", flutterEngine);
+                // Set up the MethodChannel to listen for calls from Flutter
+                new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
+                        .setMethodCallHandler(
+                                (call, result) -> {
+                                    // This block is executed when Flutter calls a method.
+                                    if (call.method.equals("getImei")) {
+                                        // Use Headwind's existing utility to get the IMEI
+                                        String imei = DeviceInfoProvider.getImei(MainActivity.this);
 
-            Log.d("FLUTTER_SERVICE", "Headless Flutter engine started successfully.");
+                                        if (imei != null && !imei.isEmpty()) {
+                                            // If successful, send the IMEI back to Flutter.
+                                            result.success(imei);
+                                        } else {
+                                            // If it fails, send a specific error message.
+                                            result.error("UNAVAILABLE", "IMEI not authorized.", null);
+                                        }
+                                    }
 
+                                    else if (call.method.equals("storeString")) {
+                                        // Get the string from the arguments sent by Flutter
+                                        String text = call.argument("textToStore");
+
+                                        // Store it in the app's private SharedPreferences
+                                        getSharedPreferences("hmdm_flutter_data", MODE_PRIVATE)
+                                                .edit()
+                                                .putString("shared_string", text)
+                                                .apply();
+
+                                        Log.d("FLUTTER_CHANNEL", "Stored string: " + text);
+
+                                        // Report success back to Flutter
+                                        result.success(null);
+                                    }
+
+
+
+
+                                    else {
+
+
+
+
+
+
+
+
+
+
+                                        // If Flutter calls a method we don't recognize.
+                                        result.notImplemented();
+                                    }
+                                }
+                        );
+
+                // Cache the FlutterEngine to be used by FlutterActivity or other parts of the app.
+                FlutterEngineCache
+                        .getInstance()
+                        .put("my_flutter_engine", flutterEngine);
+
+                Log.d("FLUTTER_SERVICE", "New headless Flutter engine created and started.");
+            } else {
+                Log.d("FLUTTER_SERVICE", "Flutter engine already running. Skipping creation.");
+            }
         } catch (Exception e) {
             Log.e("FLUTTER_SERVICE", "Failed to start headless Flutter engine.", e);
         }
@@ -967,6 +1030,36 @@ public class MainActivity
         createExitButton();
         createInfoButton();
         createUpdateButton();
+        createFlutterButton();
+    }
+    private void createFlutterButton() {
+        if ( flutterView != null ) {
+            return;
+        }
+        // The offset is the key to vertical positioning.
+        // exitView is 0.0
+        // infoView is 1.0 * margin
+        // updateView is 2.05 * margin
+        // So, our new button should be around 3.0 * margin
+        flutterView = createManageButton(R.drawable.ic_flutter_logo_24, R.drawable.ic_flutter_logo_24,
+                (int)(3.10f * getResources().getDimensionPixelOffset(R.dimen.info_icon_margin)));
+
+        // Set what happens when the button is clicked
+        flutterView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d("FLUTTER_LAUNCHER", "Flutter Icon Button clicked! Launching FlutterActivity within the same task.");
+
+                // 1. Create the Intent for the FlutterActivity using the cached engine.
+                Intent flutterIntent = FlutterActivity
+                        .withCachedEngine("my_flutter_engine")
+                        .build(MainActivity.this);
+
+                // 2. Start the activity with this intent.
+                //    By default, this will launch it in the same task stack.
+                startActivity(flutterIntent);
+            }
+        });
     }
 
     private void createButtons() {
@@ -1321,30 +1414,7 @@ public class MainActivity
         });
         exitView.setOnLongClickListener(this);
     }
-    private void createFlutterButton() {
-        if ( exitView != null ) {
-            return;
-        }
-        exitView = createManageButton(R.drawable.ic_bg_service_small, R.drawable.ic_bg_service_small, 0);
-        exitView.setOnClickListener(view -> {
-            if (view.hasFocus()) {
-                // 6 subsequent taps within 3 secs open the hidden password view
-                long now = System.currentTimeMillis();
-                if (exitFirstTapTime < now - 3000) {
-                    exitFirstTapTime = now;
-                    exitTapCount = 1;
-                } else {
-                    exitTapCount++;
-                    if (exitTapCount >= 6) {
-                        exitFirstTapTime = 0;
-                        exitTapCount = 0;
-                        createAndShowEnterPasswordDialog();
-                    }
-                }
-            }
-        });
-        exitView.setOnLongClickListener(this);
-    }
+
     private void createInfoButton() {
         if ( infoView != null ) {
             return;
@@ -1859,23 +1929,8 @@ public class MainActivity
         binding.setShowContent(true);
         // We can now sleep, uh
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        Log.d("FLUTTER_LAUNCHER", "showContent() is complete. Finding the Flutter button.");
-        Button flutterButton = findViewById(R.id.openFlutterButton);
 
-        if (flutterButton == null) {
-            Log.e("FLUTTER_LAUNCHER", "ERROR: The Flutter button is NULL even in showContent(). Check the XML file and ID.");
-        } else {
-            Log.d("FLUTTER_LAUNCHER", "Flutter button found successfully! Setting the listener.");
-            flutterButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Log.d("FLUTTER_LAUNCHER", "Button clicked! Launching FlutterActivity.");
-                    startActivity(
-                            FlutterActivity.createDefaultIntent(MainActivity.this)
-                    );
-                }
-            });
-        }
+
     }
 
     // Added an option to delay restarting the kiosk app
